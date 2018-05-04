@@ -103,7 +103,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     private String scope;
 
     protected void checkRegistry() {
-        // for backward compatibility
+        // 向后兼容
         if (registries == null || registries.isEmpty()) {
             String address = ConfigUtils.getProperty("dubbo.registry.address");
             if (address != null && address.length() > 0) {
@@ -125,6 +125,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     + Version.getVersion()
                     + ", Please add <dubbo:registry address=\"...\" /> to your spring config. If you want unregister, please set <dubbo:service registry=\"N/A\" />");
         }
+        // registry配置属性可以是多个
         for (RegistryConfig registryConfig : registries) {
             appendProperties(registryConfig);
         }
@@ -248,15 +249,15 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     protected void checkInterfaceAndMethods(Class<?> interfaceClass, List<MethodConfig> methods) {
-        // interface cannot be null
+        // 接口不能为Null
         if (interfaceClass == null) {
             throw new IllegalStateException("interface not allow null!");
         }
-        // to verify interfaceClass is an interface
+        // 校验接口是否是接口
         if (!interfaceClass.isInterface()) {
             throw new IllegalStateException("The interface class " + interfaceClass + " is not a interface!");
         }
-        // check if methods exist in the interface
+        // 检查配置属性中是否有 methods 属性
         if (methods != null && !methods.isEmpty()) {
             for (MethodConfig methodBean : methods) {
                 String methodName = methodBean.getName();

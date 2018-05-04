@@ -205,6 +205,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             return;
         }
 
+        // 延迟暴露接口
         if (delay != null && delay > 0) {
             delayExportExecutor.schedule(new Runnable() {
                 public void run() {
@@ -227,7 +228,10 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (interfaceName == null || interfaceName.length() == 0) {
             throw new IllegalStateException("<dubbo:service interface=\"\" /> interface not allow null!");
         }
-        checkDefault();
+        checkDefault();// 创建了 ProviderConfig 对象并赋值 setter is属性，提供者的缺省值设置
+        /**
+         * provider已经配置的情况下，application、module、registries、monitor、protocol中未配置的值均可以从provider获取
+         */
         if (provider != null) {
             if (application == null) {
                 application = provider.getApplication();
@@ -273,10 +277,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
-            checkInterfaceAndMethods(interfaceClass, methods);
-            checkRef();
+            checkInterfaceAndMethods(interfaceClass, methods); // 检查配置中的 interface 属性 和 methods属性
+            checkRef();  // 检查 ref 属性
             generic = Boolean.FALSE.toString();
         }
+        // 如果配置 local 属性， 是否服务接口客户端本地代理
         if (local != null) {
             if ("true".equals(local)) {
                 local = interfaceName + "Local";
@@ -291,6 +296,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 throw new IllegalStateException("The local implementation class " + localClass.getName() + " not implement interface " + interfaceName);
             }
         }
+        // 如果配置 stub 属性， 是否本地存根
         if (stub != null) {
             if ("true".equals(stub)) {
                 stub = interfaceName + "Stub";
@@ -305,24 +311,25 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 throw new IllegalStateException("The stub implementation class " + stubClass.getName() + " not implement interface " + interfaceName);
             }
         }
-        checkApplication();
-        checkRegistry();
-        checkProtocol();
-        appendProperties(this);
-        checkStubAndMock(interfaceClass);
+        checkApplication(); // 检查 application 属性
+        checkRegistry(); // 检查 registry 属性
+        checkProtocol(); // 检查 protocol 属性
+        appendProperties(this); // 赋值 ServiceConfig setter is 属性
+        checkStubAndMock(interfaceClass); // 检查是否 使用 local,stub,mock 代理
         if (path == null || path.length() == 0) {
             path = interfaceName;
         }
-        doExportUrls();
+        doExportUrls(); // 开始暴露远程服务了
         ProviderModel providerModel = new ProviderModel(getUniqueServiceName(), this, ref);
         ApplicationModel.initProviderModel(getUniqueServiceName(), providerModel);
     }
 
     private void checkRef() {
-        // reference should not be null, and is the implementation of the given interface
+        // ref属性不能为null
         if (ref == null) {
             throw new IllegalStateException("ref not allow null!");
         }
+        // ref属性必须是实现类
         if (!interfaceClass.isInstance(ref)) {
             throw new IllegalStateException("The class "
                     + ref.getClass().getName() + " unimplemented interface "
@@ -352,7 +359,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrls() {
+        // dubbo支持多注册中心，所以这一步把 registry 配置信息封装为多个url,比如 registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider...
         List<URL> registryURLs = loadRegistries(true);
+        // dubbo是支持多协议的，将所有注册的url上对应的协议暴露出来
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
@@ -697,7 +706,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 && provider != null) {
             setProtocols(provider.getProtocols());
         }
-        // backward compatibility
+        // 向下兼容
         if (protocols == null || protocols.isEmpty()) {
             setProtocol(new ProtocolConfig());
         }
