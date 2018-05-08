@@ -232,7 +232,7 @@ public class DubboProtocol extends AbstractProtocol {
         //export an stub service for dispatching event
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT);  // 是否是stub事件？ dubbo.stub.event属性
         Boolean isCallbackservice = url.getParameter(Constants.IS_CALLBACK_SERVICE, false); // 是否回调服务？ is_callback_service属性
-        if (isStubSupportEvent && !isCallbackservice) {
+        if (isStubSupportEvent && !isCallbackservice) { // TODO 这里暂时不分析，此处demo场景为false
             String stubServiceMethods = url.getParameter(Constants.STUB_EVENT_METHODS_KEY);
             if (stubServiceMethods == null || stubServiceMethods.length() == 0) {
                 if (logger.isWarnEnabled()) {
