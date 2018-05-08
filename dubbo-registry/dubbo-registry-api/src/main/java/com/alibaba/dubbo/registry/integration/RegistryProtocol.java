@@ -126,7 +126,7 @@ public class RegistryProtocol implements Protocol {
 
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         //export invoker
-        final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
+        final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker); // 本地暴露
 
         URL registryUrl = getRegistryUrl(originInvoker);
 
@@ -242,7 +242,7 @@ public class RegistryProtocol implements Protocol {
      * @return
      */
     private URL getProviderUrl(final Invoker<?> origininvoker) {
-        String export = origininvoker.getUrl().getParameterAndDecoded(Constants.EXPORT_KEY);
+        String export = origininvoker.getUrl().getParameterAndDecoded(Constants.EXPORT_KEY); // 获取 invoker 的url中的 export属性并解码
         if (export == null || export.length() == 0) {
             throw new IllegalArgumentException("The registry export url is null! registry: " + origininvoker.getUrl());
         }

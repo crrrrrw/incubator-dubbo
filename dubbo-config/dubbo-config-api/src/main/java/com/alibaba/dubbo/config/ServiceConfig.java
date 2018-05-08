@@ -518,7 +518,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         // 重要的第二步了，创建 invoker 对象
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
-                        // 官方文档加重点的一步，invoker转化为 exporter
+                        // 第三步，官方文档加重点的一步，invoker转化为 exporter
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
                         exporters.add(exporter);
                     }

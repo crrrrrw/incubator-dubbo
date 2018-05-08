@@ -30,12 +30,12 @@
 
     <!-- 多协议配置 -->
     <dubbo:protocol name="dubbo" port="20880"/>
-    <dubbo:protocol name="hessian" port="9000" />
+    <!--<dubbo:protocol name="hessian" port="9000" />-->
 
     <!-- service implementation, as same as regular local bean -->
     <bean id="demoService" class="com.alibaba.dubbo.demo.provider.DemoServiceImpl"/>
 
     <!-- 使用多个协议暴露服务 -->
-    <dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService" protocol="dubbo,hessian" />
+    <dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService" protocol="dubbo" />
 
 </beans>
