@@ -515,7 +515,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         if (logger.isInfoEnabled()) {
                             logger.info("Register dubbo service " + interfaceClass.getName() + " url " + url + " to registry " + registryURL);
                         }
-                        // 重要的第二步了，创建 invoker 对象
+                        // 重要的第二步了，创建 invoker 对象 （这里暴露远程协议里，在远程协议里增加了属性 export=url,url默认dubbo协议暴露地址）
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
                         // 第三步，官方文档加重点的一步，invoker转化为 exporter
