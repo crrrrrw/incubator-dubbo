@@ -583,10 +583,10 @@ public class ExtensionLoader<T> {
     }
 
     private void loadFile(Map<String, Class<?>> extensionClasses, String dir) {
-        String fileName = dir + type.getName();
+        String fileName = dir + type.getName(); // 获取文件路径名
         try {
             Enumeration<java.net.URL> urls;
-            ClassLoader classLoader = findClassLoader();
+            ClassLoader classLoader = findClassLoader(); // 获取了类加载器
             if (classLoader != null) {
                 urls = classLoader.getResources(fileName);
             } else {
@@ -596,29 +596,29 @@ public class ExtensionLoader<T> {
                 while (urls.hasMoreElements()) {
                     java.net.URL url = urls.nextElement();
                     try {
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8"));
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8")); // 也是以utf-8方式读取配置文件
                         try {
                             String line = null;
-                            while ((line = reader.readLine()) != null) {
+                            while ((line = reader.readLine()) != null) { // 解析每行数据
                                 final int ci = line.indexOf('#');
                                 if (ci >= 0) line = line.substring(0, ci);
                                 line = line.trim();
-                                if (line.length() > 0) {
+                                if (line.length() > 0) { // 非注释内容
                                     try {
                                         String name = null;
                                         int i = line.indexOf('=');
                                         if (i > 0) {
-                                            name = line.substring(0, i).trim();
-                                            line = line.substring(i + 1).trim();
+                                            name = line.substring(0, i).trim(); // 配置中的 key
+                                            line = line.substring(i + 1).trim(); // 配置中的 value
                                         }
                                         if (line.length() > 0) {
-                                            Class<?> clazz = Class.forName(line, true, classLoader);
+                                            Class<?> clazz = Class.forName(line, true, classLoader); // 获取class对象
                                             if (!type.isAssignableFrom(clazz)) {
                                                 throw new IllegalStateException("Error when load extension class(interface: " +
                                                         type + ", class line: " + clazz.getName() + "), class "
                                                         + clazz.getName() + "is not subtype of interface.");
                                             }
-                                            if (clazz.isAnnotationPresent(Adaptive.class)) {
+                                            if (clazz.isAnnotationPresent(Adaptive.class)) { // 如果注解了@Adaptive
                                                 if (cachedAdaptiveClass == null) {
                                                     cachedAdaptiveClass = clazz;
                                                 } else if (!cachedAdaptiveClass.equals(clazz)) {
@@ -636,7 +636,7 @@ public class ExtensionLoader<T> {
                                                     }
                                                     wrappers.add(clazz);
                                                 } catch (NoSuchMethodException e) {
-                                                    clazz.getConstructor();
+                                                    clazz.getConstructor(); // 获取class对象的构造器
                                                     if (name == null || name.length() == 0) {
                                                         name = findAnnotationName(clazz);
                                                         if (name == null || name.length() == 0) {
