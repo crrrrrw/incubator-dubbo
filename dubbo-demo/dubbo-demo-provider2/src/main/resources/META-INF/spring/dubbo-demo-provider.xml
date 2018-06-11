@@ -30,6 +30,7 @@
 
     <!-- use dubbo protocol to export service on port 20880 -->
     <dubbo:protocol name="dubbo" port="20879"/>
+    <!--<dubbo:protocol name="myrpc" port="66666"/>-->
 
     <!-- service implementation, as same as regular local bean -->
     <bean id="demoService" class="com.alibaba.dubbo.demo.provider.DemoServiceImpl"/>

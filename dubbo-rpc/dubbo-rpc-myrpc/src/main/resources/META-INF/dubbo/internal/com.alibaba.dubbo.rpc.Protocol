@@ -1,0 +1,1 @@
+myrpc=com.alibaba.dubbo.rpc.protocol.myrpc.MyRpcProtocol
