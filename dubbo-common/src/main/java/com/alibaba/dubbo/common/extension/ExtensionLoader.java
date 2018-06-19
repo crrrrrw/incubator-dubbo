@@ -293,7 +293,7 @@ public class ExtensionLoader<T> {
     public T getExtension(String name) {
         if (name == null || name.length() == 0)
             throw new IllegalArgumentException("Extension name == null");
-        if ("true".equals(name)) {
+        if ("true".equals(name)) { // 判断是否是获取默认实现
             return getDefaultExtension();
         }
         Holder<Object> holder = cachedInstances.get(name);
@@ -306,7 +306,7 @@ public class ExtensionLoader<T> {
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
-                    instance = createExtension(name);
+                    instance = createExtension(name); // 创建缓存实例
                     holder.set(instance);
                 }
             }
@@ -484,17 +484,17 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
-        Class<?> clazz = getExtensionClasses().get(name);
+        Class<?> clazz = getExtensionClasses().get(name); // 加载当前Extension的所有实现, 并从中获取指定name的Extension
         if (clazz == null) {
             throw findException(name);
         }
         try {
-            T instance = (T) EXTENSION_INSTANCES.get(clazz);
+            T instance = (T) EXTENSION_INSTANCES.get(clazz); // 从Extension实例缓存中获取实例
             if (instance == null) {
                 EXTENSION_INSTANCES.putIfAbsent(clazz, (T) clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
-            injectExtension(instance);
+            injectExtension(instance); // 注入扩展点信息
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (wrapperClasses != null && !wrapperClasses.isEmpty()) {
                 for (Class<?> wrapperClass : wrapperClasses) {
@@ -512,14 +512,17 @@ public class ExtensionLoader<T> {
         try {
             if (objectFactory != null) {
                 for (Method method : instance.getClass().getMethods()) {
+                    // 处理所有set方法
                     if (method.getName().startsWith("set")
                             && method.getParameterTypes().length == 1
                             && Modifier.isPublic(method.getModifiers())) {
                         Class<?> pt = method.getParameterTypes()[0];
                         try {
+                            // 获取setter对应的property名称
                             String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
+                            // 根据参数类型和属性名称，从 ExtensionFactory 里获取扩展点
                             Object object = objectFactory.getExtension(pt, property);
-                            if (object != null) {
+                            if (object != null) { // 如果不为空，则 setter 方法的参数是扩展点类型，那么进行注入
                                 method.invoke(instance, object);
                             }
                         } catch (Exception e) {
@@ -547,12 +550,12 @@ public class ExtensionLoader<T> {
     }
 
     private Map<String, Class<?>> getExtensionClasses() {
-        Map<String, Class<?>> classes = cachedClasses.get();
+        Map<String, Class<?>> classes = cachedClasses.get(); // 从缓存中获取 Extension 实现
         if (classes == null) {
             synchronized (cachedClasses) {
                 classes = cachedClasses.get();
                 if (classes == null) {
-                    classes = loadExtensionClasses();
+                    classes = loadExtensionClasses(); // 加载 Extension 实现，并缓存
                     cachedClasses.set(classes);
                 }
             }
@@ -562,12 +565,13 @@ public class ExtensionLoader<T> {
 
     // synchronized in getExtensionClasses
     private Map<String, Class<?>> loadExtensionClasses() {
-        final SPI defaultAnnotation = type.getAnnotation(SPI.class);
+        final SPI defaultAnnotation = type.getAnnotation(SPI.class); // 先获取 @SPI 注解中的默认值
         if (defaultAnnotation != null) {
+            // 如果 @SPI 注解存在 value 默认值, 赋值给 cachedDefaultName 属性
             String value = defaultAnnotation.value();
             if (value != null && (value = value.trim()).length() > 0) {
                 String[] names = NAME_SEPARATOR.split(value);
-                if (names.length > 1) {
+                if (names.length > 1) { // 每个扩展点实现只能配置一个名字
                     throw new IllegalStateException("more than 1 default extension name on extension " + type.getName()
                             + ": " + Arrays.toString(names));
                 }
@@ -575,6 +579,7 @@ public class ExtensionLoader<T> {
             }
         }
 
+        // 从配置路径中加载扩展实现类
         Map<String, Class<?>> extensionClasses = new HashMap<String, Class<?>>();
         loadFile(extensionClasses, DUBBO_INTERNAL_DIRECTORY);
         loadFile(extensionClasses, DUBBO_DIRECTORY);
@@ -620,23 +625,23 @@ public class ExtensionLoader<T> {
                                             }
                                             if (clazz.isAnnotationPresent(Adaptive.class)) { // 如果注解了@Adaptive
                                                 if (cachedAdaptiveClass == null) {
-                                                    cachedAdaptiveClass = clazz;
-                                                } else if (!cachedAdaptiveClass.equals(clazz)) {
+                                                    cachedAdaptiveClass = clazz; // 缓存 cachedAdaptiveClass
+                                                } else if (!cachedAdaptiveClass.equals(clazz)) { // 只允许一个 Adaptive 实现
                                                     throw new IllegalStateException("More than 1 adaptive class found: "
                                                             + cachedAdaptiveClass.getClass().getName()
                                                             + ", " + clazz.getClass().getName());
                                                 }
                                             } else {
                                                 try {
-                                                    clazz.getConstructor(type);
+                                                    clazz.getConstructor(type); // 判断是否 Wrapper 类型
                                                     Set<Class<?>> wrappers = cachedWrapperClasses;
                                                     if (wrappers == null) {
                                                         cachedWrapperClasses = new ConcurrentHashSet<Class<?>>();
                                                         wrappers = cachedWrapperClasses;
                                                     }
                                                     wrappers.add(clazz);
-                                                } catch (NoSuchMethodException e) {
-                                                    clazz.getConstructor(); // 获取class对象的构造器
+                                                } catch (NoSuchMethodException e) { // 非 Wrapper 类型
+                                                    clazz.getConstructor(); // 获取class对象的无参构造器
                                                     if (name == null || name.length() == 0) {
                                                         name = findAnnotationName(clazz);
                                                         if (name == null || name.length() == 0) {
@@ -652,16 +657,16 @@ public class ExtensionLoader<T> {
                                                     if (names != null && names.length > 0) {
                                                         Activate activate = clazz.getAnnotation(Activate.class);
                                                         if (activate != null) {
-                                                            cachedActivates.put(names[0], activate);
+                                                            cachedActivates.put(names[0], activate); // 缓存 cachedActivates
                                                         }
                                                         for (String n : names) {
                                                             if (!cachedNames.containsKey(clazz)) {
-                                                                cachedNames.put(clazz, n);
+                                                                cachedNames.put(clazz, n); // 缓存 cachedNames ,每个class只对应一个名称
                                                             }
                                                             Class<?> c = extensionClasses.get(n);
                                                             if (c == null) {
-                                                                extensionClasses.put(n, clazz);
-                                                            } else if (c != clazz) {
+                                                                extensionClasses.put(n, clazz); // 放入到extensionClasses中,多个 name 可能对应一个Class
+                                                            } else if (c != clazz) { // 重复抛异常
                                                                 throw new IllegalStateException("Duplicate extension " + type.getName() + " name " + n + " on " + c.getName() + " and " + clazz.getName());
                                                             }
                                                         }
