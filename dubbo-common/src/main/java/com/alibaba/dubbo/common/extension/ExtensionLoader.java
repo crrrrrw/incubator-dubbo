@@ -95,6 +95,11 @@ public class ExtensionLoader<T> {
 
     private ExtensionLoader(Class<?> type) {
         this.type = type;
+        /**
+         * 这里会存在递归调用,ExtensionFactory的objectFactory为null,其他则为AdaptiveExtensionFactory
+         * AdaptiveExtensionFactory的factories中有SpiExtensionFactory,SpringExtensionFactory
+         * getAdaptiveExtension()来获取一个拓展装饰类对象
+         */
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
@@ -104,16 +109,17 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
-        if (type == null)
+        if (type == null) //拓展点类型非空判断
             throw new IllegalArgumentException("Extension type == null");
-        if (!type.isInterface()) {
+        if (!type.isInterface()) { // 拓展点类型只能是接口
             throw new IllegalArgumentException("Extension type(" + type + ") is not interface!");
         }
-        if (!withExtensionAnnotation(type)) {
+        if (!withExtensionAnnotation(type)) { // 必须使用@spi注解,否则抛异常
             throw new IllegalArgumentException("Extension type(" + type +
                     ") is not extension, because WITHOUT @" + SPI.class.getSimpleName() + " Annotation!");
         }
 
+        // 使用了缓存，从缓存EXTENSION_LOADERS中获取,如果不存在则创建后加入缓存，每个扩展点有且仅有一个ExtensionLoader实例与之对应。
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -185,12 +191,13 @@ public class ExtensionLoader<T> {
         List<T> exts = new ArrayList<T>();
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
-            getExtensionClasses();
+            getExtensionClasses(); // 此处缓存了 cachedActivates
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
-                String name = entry.getKey();
+                String name = entry.getKey(); // 获取 可激活的扩展点的spi扩展名
                 Activate activate = entry.getValue();
-                if (isMatchGroup(group, activate.group())) {
-                    T ext = getExtension(name);
+                if (isMatchGroup(group, activate.group())) { // 如果group匹配
+                    T ext = getExtension(name); // 根据扩展点名称获取扩展点实例
+                    // name不在 values 指定的列，且没排除name，且url上有activate的value，则激活
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activate, url)) {
@@ -198,11 +205,12 @@ public class ExtensionLoader<T> {
                     }
                 }
             }
-            Collections.sort(exts, ActivateComparator.COMPARATOR);
+            Collections.sort(exts, ActivateComparator.COMPARATOR); // 排序
         }
         List<T> usrs = new ArrayList<T>();
-        for (int i = 0; i < names.size(); i++) {
+        for (int i = 0; i < names.size(); i++) { // 指定使用values的时候
             String name = names.get(i);
+            // 所有未被排除的扩展名
             if (!name.startsWith(Constants.REMOVE_VALUE_PREFIX)
                     && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
                 if (Constants.DEFAULT_KEY.equals(name)) {
@@ -495,7 +503,8 @@ public class ExtensionLoader<T> {
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
             injectExtension(instance); // 注入扩展点信息
-            Set<Class<?>> wrapperClasses = cachedWrapperClasses;
+            Set<Class<?>> wrapperClasses = cachedWrapperClasses; // 获取缓存的Wrapper类集合
+            // 如果是包装类则创建包装类扩展点实例
             if (wrapperClasses != null && !wrapperClasses.isEmpty()) {
                 for (Class<?> wrapperClass : wrapperClasses) {
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
