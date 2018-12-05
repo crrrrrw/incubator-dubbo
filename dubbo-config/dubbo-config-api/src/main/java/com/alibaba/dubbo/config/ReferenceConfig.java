@@ -192,7 +192,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         // get consumer's global configuration
         checkDefault();
-        appendProperties(this);
+        appendProperties(this); // 添加config 配置属性(根据xml或者java bean)
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
@@ -205,14 +205,14 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
-            checkInterfaceAndMethods(interfaceClass, methods);
+            checkInterfaceAndMethods(interfaceClass, methods); // 检查配置中的 interface 属性 和 methods属性
         }
         String resolve = System.getProperty(interfaceName);
         String resolveFile = null;
         if (resolve == null || resolve.length() == 0) {
-            resolveFile = System.getProperty("dubbo.resolve.file");
+            resolveFile = System.getProperty("dubbo.resolve.file"); // resolveFile 映射路径文件，通常用于开发直连调试
             if (resolveFile == null || resolveFile.length() == 0) {
-                File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
+                File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties"); // 默认加载 ${user.home}/dubbo-resolve.properties
                 if (userResolveFile.exists()) {
                     resolveFile = userResolveFile.getAbsolutePath();
                 }
@@ -232,7 +232,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         logger.warn(e.getMessage(), e);
                     }
                 }
-                resolve = properties.getProperty(interfaceName);
+                resolve = properties.getProperty(interfaceName); // 获取接口的直连地址
             }
         }
         if (resolve != null && resolve.length() > 0) {
@@ -245,6 +245,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
         }
+        // 获取 应用配置，模块配置，注册中心(多个)配置，监控配置
         if (consumer != null) {
             if (application == null) {
                 application = consumer.getApplication();
@@ -277,6 +278,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         checkApplication();
         checkStubAndMock(interfaceClass);
+        // 添加调用信息，用于封装为invoker，side=consumer,dubbo=2.0.0,timestamp=xxxxx,pid=xxx
         Map<String, String> map = new HashMap<String, String>();
         Map<Object, Object> attributes = new HashMap<Object, Object>();
         map.put(Constants.SIDE_KEY, Constants.CONSUMER_SIDE);
@@ -332,12 +334,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         StaticContext.getSystemContext().putAll(attributes);
         ref = createProxy(map);
         ConsumerModel consumerModel = new ConsumerModel(getUniqueServiceName(), this, ref, interfaceClass.getMethods());
-        ApplicationModel.initConsumerModel(getUniqueServiceName(), consumerModel);
+        ApplicationModel.initConsumerModel(getUniqueServiceName(), consumerModel); // 实际将消费者模块放入缓存中
     }
 
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
     private T createProxy(Map<String, String> map) {
-        URL tmpUrl = new URL("temp", "localhost", 0, map);
+        URL tmpUrl = new URL("temp", "localhost", 0, map); // 初始化url  temp://localhost?xxx=xxx
+        // 判断是否是内部调用
         final boolean isJvmRefer;
         if (isInjvm() == null) {
             if (url != null && url.length() > 0) { // if a url is specified, don't do local reference
@@ -359,6 +362,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
         } else {
+            // 是否是点对点调用（之前的resolveFile配置和获取）
             if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
                 if (us != null && us.length > 0) {
@@ -375,7 +379,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     }
                 }
             } else { // assemble URL from register center's configuration
-                List<URL> us = loadRegistries(false);
+                List<URL> us = loadRegistries(false); // 加载注册中心列表
                 if (us != null && !us.isEmpty()) {
                     for (URL u : us) {
                         URL monitorUrl = loadMonitor(u);
