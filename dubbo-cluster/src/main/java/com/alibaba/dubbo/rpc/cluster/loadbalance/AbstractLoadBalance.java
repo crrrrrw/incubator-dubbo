@@ -46,13 +46,15 @@ public abstract class AbstractLoadBalance implements LoadBalance {
     protected abstract <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation);
 
     protected int getWeight(Invoker<?> invoker, Invocation invocation) {
+        // 根据url参数中 weight 参数获取权重值
         int weight = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.WEIGHT_KEY, Constants.DEFAULT_WEIGHT);
         if (weight > 0) {
+            // 根据url参数中 remote.timestamp 参数获取远程服务启动时间戳
             long timestamp = invoker.getUrl().getParameter(Constants.REMOTE_TIMESTAMP_KEY, 0L);
             if (timestamp > 0L) {
-                int uptime = (int) (System.currentTimeMillis() - timestamp);
-                int warmup = invoker.getUrl().getParameter(Constants.WARMUP_KEY, Constants.DEFAULT_WARMUP);
-                if (uptime > 0 && uptime < warmup) {
+                int uptime = (int) (System.currentTimeMillis() - timestamp); // 时间差
+                int warmup = invoker.getUrl().getParameter(Constants.WARMUP_KEY, Constants.DEFAULT_WARMUP); // 获取阈值时间，默认十分钟
+                if (uptime > 0 && uptime < warmup) { // 若服务启动消耗时间 < 阈值时间 ， 则降权
                     weight = calculateWarmupWeight(uptime, warmup, weight);
                 }
             }

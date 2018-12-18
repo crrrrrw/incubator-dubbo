@@ -41,36 +41,41 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
     @SuppressWarnings("unchecked")
     @Override
     protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
-        String key = invokers.get(0).getUrl().getServiceKey() + "." + invocation.getMethodName();
-        int identityHashCode = System.identityHashCode(invokers);
-        ConsistentHashSelector<T> selector = (ConsistentHashSelector<T>) selectors.get(key);
+        String key = invokers.get(0).getUrl().getServiceKey() + "." + invocation.getMethodName(); // 获取方法调用名
+        int identityHashCode = System.identityHashCode(invokers); // 生成调用列表hashcode
+        ConsistentHashSelector<T> selector = (ConsistentHashSelector<T>) selectors.get(key); // 从缓存中获取此方法的一致性哈希选择器
         if (selector == null || selector.identityHashCode != identityHashCode) {
+            // 缓存 key -> selector
             selectors.put(key, new ConsistentHashSelector<T>(invokers, invocation.getMethodName(), identityHashCode));
             selector = (ConsistentHashSelector<T>) selectors.get(key);
         }
-        return selector.select(invocation);
+        return selector.select(invocation); // 选择节点实现由内部类selector完成
     }
 
     private static final class ConsistentHashSelector<T> {
 
-        private final TreeMap<Long, Invoker<T>> virtualInvokers;
+        private final TreeMap<Long, Invoker<T>> virtualInvokers; // 虚拟节点
 
-        private final int replicaNumber;
+        private final int replicaNumber; // 副本数
 
-        private final int identityHashCode;
+        private final int identityHashCode; // hashcode
 
-        private final int[] argumentIndex;
+        private final int[] argumentIndex; // 参数索引数组
 
         ConsistentHashSelector(List<Invoker<T>> invokers, String methodName, int identityHashCode) {
-            this.virtualInvokers = new TreeMap<Long, Invoker<T>>();
-            this.identityHashCode = identityHashCode;
+            // 1.初始化属性
+            this.virtualInvokers = new TreeMap<Long, Invoker<T>>(); // 虚拟节点用TreeMap结构
+            this.identityHashCode = identityHashCode; // hashcode取调用列表hashcode
             URL url = invokers.get(0).getUrl();
-            this.replicaNumber = url.getMethodParameter(methodName, "hash.nodes", 160);
-            String[] index = Constants.COMMA_SPLIT_PATTERN.split(url.getMethodParameter(methodName, "hash.arguments", "0"));
+            this.replicaNumber = url.getMethodParameter(methodName, "hash.nodes", 160); // 获取 url 上 hash.nodes属性，默认160
+            String[] index = Constants.COMMA_SPLIT_PATTERN.split(url.getMethodParameter(methodName, "hash.arguments", "0")); // 获取 url 上 hash.arguments属性，默认"0"
+            // 获取 hash.arguments 数组
             argumentIndex = new int[index.length];
             for (int i = 0; i < index.length; i++) {
                 argumentIndex[i] = Integer.parseInt(index[i]);
             }
+            // 2.开始创建虚拟结点
+            // 对每个invoker生成replicaNumber个虚拟结点，并存放于TreeMap中
             for (Invoker<T> invoker : invokers) {
                 String address = invoker.getUrl().getAddress();
                 for (int i = 0; i < replicaNumber / 4; i++) {
@@ -84,8 +89,10 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         }
 
         public Invoker<T> select(Invocation invocation) {
-            String key = toKey(invocation.getArguments());
-            byte[] digest = md5(key);
+            String key = toKey(invocation.getArguments()); // 根据调用参数获取 key
+            byte[] digest = md5(key); // 生成消息摘要
+            // 将消息摘要转换为hashCode，这里仅取0-31位来生成HashCode
+            // 调用sekectForKey方法选择结点。
             return selectForKey(hash(digest, 0));
         }
 
@@ -100,7 +107,9 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         }
 
         private Invoker<T> selectForKey(long hash) {
+            // 1.找到一个该hash值得尾节点，然后获取其上一个节点
             Map.Entry<Long, Invoker<T>> entry = virtualInvokers.tailMap(hash, true).firstEntry();
+            // 2.如果该节点不存在，即表示落在环上最后一个和第一个之间的位置，那么直接返回最小值(第一个点)，这样就形成了逻辑环
         	if (entry == null) {
         		entry = virtualInvokers.firstEntry();
         	}

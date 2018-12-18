@@ -36,13 +36,13 @@ public class MockInvokersSelector implements Router {
     public <T> List<Invoker<T>> route(final List<Invoker<T>> invokers,
                                       URL url, final Invocation invocation) throws RpcException {
         if (invocation.getAttachments() == null) {
-            return getNormalInvokers(invokers);
+            return getNormalInvokers(invokers); // 获取正常的提供者
         } else {
             String value = invocation.getAttachments().get(Constants.INVOCATION_NEED_MOCK);
             if (value == null)
-                return getNormalInvokers(invokers);
+                return getNormalInvokers(invokers); // 获取正常的提供者
             else if (Boolean.TRUE.toString().equalsIgnoreCase(value)) {
-                return getMockedInvokers(invokers);
+                return getMockedInvokers(invokers); // 获取降级的提供者，即协议是mock
             }
         }
         return invokers;

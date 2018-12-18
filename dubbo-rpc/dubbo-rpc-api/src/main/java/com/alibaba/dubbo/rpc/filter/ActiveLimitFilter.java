@@ -35,8 +35,10 @@ public class ActiveLimitFilter implements Filter {
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         URL url = invoker.getUrl();
         String methodName = invocation.getMethodName();
+        // actives属性，获取该服务该方法的最大并发调用数
         int max = invoker.getUrl().getMethodParameter(methodName, Constants.ACTIVES_KEY, 0);
-        RpcStatus count = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName());
+        RpcStatus count = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName()); // 获取该服务调用状态
+        // 配置了最大并发调用数且大于0，则限制并发数
         if (max > 0) {
             long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, 0);
             long start = System.currentTimeMillis();
@@ -64,10 +66,10 @@ public class ActiveLimitFilter implements Filter {
         }
         try {
             long begin = System.currentTimeMillis();
-            RpcStatus.beginCount(url, methodName);
+            RpcStatus.beginCount(url, methodName); // 活跃数+1
             try {
                 Result result = invoker.invoke(invocation);
-                RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, true);
+                RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, true); // 活跃数-1
                 return result;
             } catch (RuntimeException t) {
                 RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, false);

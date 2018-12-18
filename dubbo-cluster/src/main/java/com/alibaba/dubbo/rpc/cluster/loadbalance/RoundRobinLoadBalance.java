@@ -46,20 +46,20 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
         int weightSum = 0;
         for (int i = 0; i < length; i++) {
             int weight = getWeight(invokers.get(i), invocation);
-            maxWeight = Math.max(maxWeight, weight); // Choose the maximum weight
-            minWeight = Math.min(minWeight, weight); // Choose the minimum weight
+            maxWeight = Math.max(maxWeight, weight); // Choose the maximum weight 1.获取最大权重
+            minWeight = Math.min(minWeight, weight); // Choose the minimum weight 2.获取最小权重
             if (weight > 0) {
-                invokerToWeightMap.put(invokers.get(i), new IntegerWrapper(weight));
-                weightSum += weight;
+                invokerToWeightMap.put(invokers.get(i), new IntegerWrapper(weight)); // 3.invoker和权重大小的映射
+                weightSum += weight; // 4.获取总权重
             }
         }
-        AtomicPositiveInteger sequence = sequences.get(key);
+        AtomicPositiveInteger sequence = sequences.get(key); // 此方法的调用序列号
         if (sequence == null) {
-            sequences.putIfAbsent(key, new AtomicPositiveInteger());
+            sequences.putIfAbsent(key, new AtomicPositiveInteger()); // 存储方法调用的序列号
             sequence = sequences.get(key);
         }
-        int currentSequence = sequence.getAndIncrement();
-        if (maxWeight > 0 && minWeight < maxWeight) {
+        int currentSequence = sequence.getAndIncrement(); // 序列号+1
+        if (maxWeight > 0 && minWeight < maxWeight) { // 如果权重不一样
             int mod = currentSequence % weightSum;
             for (int i = 0; i < maxWeight; i++) {
                 for (Map.Entry<Invoker<T>, IntegerWrapper> each : invokerToWeightMap.entrySet()) {
@@ -69,13 +69,14 @@ public class RoundRobinLoadBalance extends AbstractLoadBalance {
                         return k;
                     }
                     if (v.getValue() > 0) {
-                        v.decrement();
+                        v.decrement(); // 权重递减
                         mod--;
                     }
                 }
             }
         }
         // Round robin
+        // 权重相同，则直接轮询即可
         return invokers.get(currentSequence % length);
     }
 
